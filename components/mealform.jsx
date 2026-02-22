@@ -1,3 +1,4 @@
+// src/lib/src/MealForm.jsx
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import './meal_form.css';
@@ -14,15 +15,11 @@ export default function MealForm() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
 
-  const addIngredient = () => {
-    setIngredients([...ingredients, emptyIngredient()]);
-  };
-
+  const addIngredient = () => setIngredients([...ingredients, emptyIngredient()]);
   const removeIngredient = (index) => {
     if (ingredients.length <= 1) return;
     setIngredients(ingredients.filter((_, i) => i !== index));
   };
-
   const updateIngredient = (index, field, value) => {
     const updated = [...ingredients];
     updated[index] = { ...updated[index], [field]: value };
@@ -49,9 +46,13 @@ export default function MealForm() {
       return;
     }
 
-    const validIngredients = ingredients.filter(
-      (ing) => ing.name.trim() && ing.kgPrice && ing.amount
-    );
+    const validIngredients = ingredients
+      .filter((ing) => ing.name.trim() && ing.kgPrice && ing.amount)
+      .map((ing) => ({
+        name: ing.name.trim(),
+        kgPrice: parseFloat(ing.kgPrice),
+        amount: parseFloat(ing.amount),
+      }));
 
     if (validIngredients.length === 0) {
       setMessage({ type: 'error', text: 'Please add at least one ingredient.' });
@@ -61,38 +62,30 @@ export default function MealForm() {
     setSubmitting(true);
 
     try {
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('You must be logged in to add meals');
+
+      // Insert meal with user_id and ingredients JSONB
       const { data: mealData, error: mealError } = await supabase
         .from('meals')
         .insert({
           name: mealName.trim(),
           estimated_cost: Math.round(estimatedCost * 100) / 100,
+          user_id: user.id,
+          ingredients: validIngredients, // store as JSONB
         })
         .select('id')
         .single();
 
       if (mealError) throw mealError;
 
-      // Insert ingredients if the table exists (meal_id, name, kg_price, amount_kg)
-      const ingredientRows = validIngredients.map((ing) => ({
-        meal_id: mealData.id,
-        name: ing.name.trim(),
-        kg_price: parseFloat(ing.kgPrice),
-        amount_kg: parseFloat(ing.amount),
-      }));
-
-      const { error: ingError } = await supabase
-        .from('ingredients')
-        .insert(ingredientRows);
-
-      if (ingError) {
-        // Meal was saved; ingredients table might not exist yet
-        console.warn('Ingredients not saved (table may not exist):', ingError);
-      }
-
       setMessage({
         type: 'success',
         text: `Meal "${mealName}" saved. Estimated cost: ${estimatedCost.toFixed(2)}€`,
       });
+
+      // Reset form
       setMealName('');
       setIngredients([emptyIngredient()]);
     } catch (err) {
@@ -145,9 +138,7 @@ export default function MealForm() {
                   min="0"
                   placeholder="€/kg"
                   value={ing.kgPrice}
-                  onChange={(e) =>
-                    updateIngredient(index, 'kgPrice', e.target.value)
-                  }
+                  onChange={(e) => updateIngredient(index, 'kgPrice', e.target.value)}
                 />
                 <input
                   type="number"
@@ -155,13 +146,9 @@ export default function MealForm() {
                   min="0"
                   placeholder="Amount (kg)"
                   value={ing.amount}
-                  onChange={(e) =>
-                    updateIngredient(index, 'amount', e.target.value)
-                  }
+                  onChange={(e) => updateIngredient(index, 'amount', e.target.value)}
                 />
-                <span className="ingredient-cost">
-                  {getIngredientCost(ing).toFixed(2)}€
-                </span>
+                <span className="ingredient-cost">{getIngredientCost(ing).toFixed(2)}€</span>
                 <button
                   type="button"
                   onClick={() => removeIngredient(index)}
