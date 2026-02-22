@@ -1,0 +1,243 @@
+/* =========================
+   Base Container
+========================= */
+
+.calendar-container {
+  border-radius: 14px; /*round corners for a softer look */
+  overflow: hidden; 
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #ffffff;
+}
+
+.calendar-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 20px;
+}
+
+.calendar-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 300px;
+  font-size: 16px;
+  color: #475569;
+}
+
+/* =========================
+   Calendar Grid (CORE)
+========================= */
+/*
+Grid layout:
+| label | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
+|------ |-----|-----|-----|-----|-----|-----|-----|
+| row   |     |     |     |     |     |     |     |
+*/
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: 120px repeat(7, 1fr);
+  grid-template-rows: auto repeat(3, 96px);
+  gap: 14px;
+}
+
+/* =========================
+   Day Headers
+========================= */
+
+.calendar-day-header {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  padding: 10px 6px;
+  text-align: center;
+}
+
+.calendar-day-header.today {
+  background: #dcfce7;
+  border-color: #34d399;
+}
+
+.calendar-day-name {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.calendar-day-number {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 2px;
+}
+
+/* =========================
+   Meal Row Labels
+========================= */
+
+.calendar-meal-label {
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+}
+
+/* =========================
+   Meal Slots
+========================= */
+
+.calendar-meal-slot {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.calendar-meal-slot.empty:hover {
+  background: #ffffff;
+  border-color: #94a3b8;
+}
+
+/* Filled slot */
+
+.calendar-meal-slot.filled {
+  cursor: default;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 10px;
+}
+
+/* =========================
+   + Icon
+========================= */
+
+.meal-slot-plus {
+  font-size: 26px;
+  color: #cbd5e1;
+
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none;    /* Firefox (older) */ /* did this because normal user-select can sometimes be unavailable on old safari, and vscode was being dramatic */
+  -ms-user-select: none;     /* old Edge / IE */
+  user-select: none;
+}
+
+/* =========================
+   Meal Content
+========================= */
+
+.meal-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.meal-cost {
+  font-size: 13px;
+  font-weight: 600;
+  color: #059669;
+  margin-top: 4px;
+}
+
+/* =========================
+   Remove Button
+========================= */
+
+.meal-remove-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: #ef4444;
+  color: white;
+  font-size: 14px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.meal-remove-btn:hover {
+  background: #dc2626;
+}
+
+/* =========================
+   Add Meal Form
+========================= */
+
+.meal-slot-add-form {
+  width: 100%;
+}
+
+.meal-slot-add-form select {
+  width: 100%;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.meal-slot-add-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-add-meal,
+.btn-cancel {
+  flex: 1;
+  padding: 6px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-add-meal {
+  background: #22c55e;
+  color: white;
+}
+
+.btn-add-meal:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.btn-cancel {
+  background: #e5e7eb;
+}
+
+/* =========================
+   Responsive
+========================= */
+
+@media (max-width: 1024px) {
+  .calendar-grid {
+    grid-template-columns: 100px repeat(7, minmax(90px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .calendar-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+  }
+
+  .calendar-meal-label {
+    display: none;
+  }
+}

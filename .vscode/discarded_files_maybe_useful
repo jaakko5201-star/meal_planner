@@ -1,0 +1,302 @@
+/* weekcalendar.css */
+
+/* =========================
+   Base Container
+========================= */
+
+.calendar-container {
+  font-family: Arial, Helvetica, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #98e39b;
+  min-height: 100vh;
+}
+
+.calendar-title {
+  text-align: center;
+  margin-bottom: 16px;
+  color: #1e293b;
+}
+
+.calendar-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 300px;
+  font-size: 18px;
+  color: #475569;
+  font-weight: 500;
+}
+
+/* =========================
+   Grid Layout
+========================= */
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+  animation: fadeIn 0.25s ease-out;
+}
+
+/* =========================
+   Day Column
+========================= */
+
+.day-column {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 360px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.day-column:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* =========================
+   Day Header
+========================= */
+
+.day-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 14px 10px;
+  text-align: center;
+}
+
+.day-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  opacity: 0.9;
+}
+
+.day-number {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+/* Today highlight */
+
+.day-column.today .day-header {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+/* =========================
+   Meals Container
+========================= */
+
+.meals-container {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-grow: 1;
+  background: #f8fafc;
+}
+
+/* =========================
+   Meal Card
+========================= */
+
+.meal-card {
+  position: relative;
+  background: white;
+  border-radius: 8px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  min-height: 72px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.meal-card:hover {
+  border-color: #c7d2fe;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+}
+
+/* =========================
+   Meal Content
+========================= */
+
+.meal-type {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.meal-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  line-height: 1.3;
+}
+
+.meal-cost {
+  font-size: 13px;
+  font-weight: 600;
+  color: #059669;
+  margin-top: 4px;
+  text-align: right;
+}
+
+/* =========================
+   Empty Slot (+ button)
+========================= */
+
+.meal-slot-empty {
+  width: 100%;
+  height: 56px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f1f5f9;
+  font-size: 24px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.meal-slot-empty:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #334155;
+}
+
+/* =========================
+   Remove Button
+========================= */
+
+.meal-slot-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  border: none;
+  background: #ef4444;
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 14px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.meal-slot-remove:hover {
+  background: #dc2626;
+}
+
+/* =========================
+   Add Form
+========================= */
+
+.meal-slot-add-form select {
+  width: 100%;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  margin-bottom: 6px;
+}
+
+.meal-slot-add-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-add-meal,
+.btn-cancel {
+  flex: 1;
+  padding: 6px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-add-meal {
+  background: #22c55e;
+  color: white;
+}
+
+.btn-add-meal:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.btn-cancel {
+  background: #e2e8f0;
+}
+
+/* =========================
+   Meal Type Colors
+========================= */
+
+.meal-card[data-meal-type="breakfast"] .meal-type {
+  color: #d97706;
+}
+
+.meal-card[data-meal-type="lunch"] .meal-type {
+  color: #1d4ed8;
+}
+
+.meal-card[data-meal-type="dinner"] .meal-type {
+  color: #be185d;
+}
+
+/* =========================
+   Responsive
+========================= */
+
+@media (max-width: 1024px) {
+  .calendar-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .calendar-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .calendar-container {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .calendar-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================
+   Animation
+========================= */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

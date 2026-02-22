@@ -1,0 +1,79 @@
+:root {
+  --primary: #f1f2f3;
+  --bg: #8de3a8;
+  --card-bg: #030303;
+  --text: #111827;
+  --muted: #6b7280;
+  --radius: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+/* Main app container */
+.app-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Login screen */
+.login-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;  /* fill the screen */
+  gap: 16px;           /* spacing between heading and buttons */
+  color: var(--text);
+  padding: 24px;
+  text-align: center;
+}
+
+/* Login button */
+.login-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  background-color: #2563eb;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.login-btn:hover {
+  background-color: #1d4ed8;
+}
+
+/* Optional: style headings inside login */
+.login-container h2 {
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Optional: style test button if used */
+.login-container button {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  background-color: #10b981; /* green */
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.login-container button:hover {
+  background-color: #059669;
+}

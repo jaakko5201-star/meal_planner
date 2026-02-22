@@ -1,0 +1,120 @@
+/* budgetcard.css */
+
+.budget-card-container {
+  font-family: Arial, Helvetica, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+  padding: 20px;
+  max-width: 400px;
+  margin: 0 auto;
+  background-color: #98e39b;
+  min-height: 100vh;
+}
+
+.budget-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+}
+
+.budget-card-title {
+  margin: 0 0 8px 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: #1e293b;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.budget-week-label {
+  margin: 0 0 20px 0;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.budget-input-section {
+  margin-bottom: 24px;
+}
+
+.budget-input-section label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.budget-input-section input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.budget-input-section input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.budget-input-section input::placeholder {
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+.budget-loading {
+  padding: 24px 0;
+  text-align: center;
+  color: #64748b;
+  font-size: 15px;
+}
+
+.budget-summary {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 20px;
+}
+
+.budget-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.budget-row:last-of-type {
+  margin-bottom: 0;
+}
+
+.budget-label {
+  font-size: 15px;
+  color: #64748b;
+}
+
+.budget-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.budget-value--over {
+  color: #dc2626;
+}
+
+.budget-progress {
+  margin-top: 20px;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.budget-progress-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
