@@ -42,7 +42,7 @@ function App() {
   if (!user) {
     return (
       <div className="login-container">
-        <h2>Welcome to Family Meal Planner</h2>
+        <h2>Welcome to Meal planner</h2>
         <LoginButton />
         {/* Optional test button to confirm rendering */}
         <button onClick={() => alert('Button works!')}>Test Button</button>
