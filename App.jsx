@@ -13,27 +13,27 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // First-time registration: create profile + default budget
+  const registerFirstTimeUser = async (user) => {
+    if (!user) return;
+
+    // Upsert profile row
+    await supabase.from('profiles').upsert({
+      id: user.id,
+      full_name: user.user_metadata.full_name,
+      created_at: new Date().toISOString(),
+    });
+
+    // Upsert a default weekly budget
+    await supabase.from('budgets').upsert({
+      user_id: user.id,
+      amount: 50, // default starting budget
+      start_date: new Date().toISOString(),
+      end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+  };
+
   useEffect(() => {
-    // Function to register new users automatically
-    const registerFirstTimeUser = async (user) => {
-      if (!user) return;
-
-      // Upsert profile row
-      await supabase.from('profiles').upsert({
-        id: user.id,
-        full_name: user.user_metadata.full_name,
-        created_at: new Date().toISOString(),
-      });
-
-      // Upsert a default weekly budget
-      await supabase.from('budgets').upsert({
-        user_id: user.id,
-        amount: 50, // default starting budget
-        start_date: new Date().toISOString(),
-        end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      });
-    };
-
     // Check for existing session
     supabase.auth.getSession().then(async ({ data }) => {
       const user = data.session?.user ?? null;
@@ -62,7 +62,6 @@ function App() {
 
   if (loading) return <div>Loading...</div>;
 
-  // LOGIN SCREEN
   if (!user) {
     return (
       <div className="login-container">
@@ -72,7 +71,6 @@ function App() {
     );
   }
 
-  // MAIN APP WHEN LOGGED IN
   return (
     <>
       <Navbar user={user} onLogout={handleLogout} />
