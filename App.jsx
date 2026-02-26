@@ -1,4 +1,3 @@
-// App.jsx
 import React, { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/navbar';
@@ -13,27 +12,26 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // First-time registration: create profile + default budget
-  const registerFirstTimeUser = async (user) => {
-    if (!user) return;
-
-    // Upsert profile row
-    await supabase.from('profiles').upsert({
-      id: user.id,
-      full_name: user.user_metadata.full_name,
-      created_at: new Date().toISOString(),
-    });
-
-    // Upsert a default weekly budget
-    await supabase.from('budgets').upsert({
-      user_id: user.id,
-      amount: 50, // default starting budget
-      start_date: new Date().toISOString(),
-      end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    });
-  };
-
   useEffect(() => {
+    const registerFirstTimeUser = async (user) => {
+      if (!user) return;
+
+      // 1️⃣ Upsert profile row
+      await supabase.from('profiles').upsert({
+        id: user.id,
+        full_name: user.user_metadata.full_name,
+        created_at: new Date().toISOString(),
+      });
+
+      // 2️⃣ Upsert default budget if not exists
+      await supabase.from('budgets').upsert({
+        user_id: user.id,
+        amount: 50,
+        start_date: new Date().toISOString(),
+        end_date: new Date(Date.now() + 7*24*60*60*1000).toISOString(),
+      }, { onConflict: 'user_id' });
+    };
+
     // Check for existing session
     supabase.auth.getSession().then(async ({ data }) => {
       const user = data.session?.user ?? null;
@@ -42,7 +40,7 @@ function App() {
       setLoading(false);
     });
 
-    // Listen for login/logout events
+    // Listen for login/logout
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         const user = session?.user ?? null;
