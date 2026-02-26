@@ -1,134 +1,90 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient';
-import './grocerylist.css';
-
-const STORAGE_KEY = 'my-food-app-grocery-list';
-
-const loadFromStorage = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const parsed = stored ? JSON.parse(stored) : [];
-    return parsed.map((item) => ({
-      ...item,
-      id: item.id ?? crypto.randomUUID?.() ?? Date.now() + Math.random(),
-    }));
-  } catch {
-    return [];
-  }
-};
-
-const saveToStorage = (items) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-};
-
-// Merge new ingredients into list, aggregating by name (case-insensitive)
-const mergeIngredients = (existing, newItems, source = 'Manual') => {
-  const merged = [...existing];
-  for (const item of newItems) {
-    const name = (item.name || '').trim();
-    if (!name) continue;
-    const amount = parseFloat(item.amount_kg ?? item.amount ?? 0) || 0;
-    const kgPrice = parseFloat(item.kg_price ?? item.kgPrice ?? 0) || 0;
-
-    const existingIndex = merged.findIndex(
-      (i) => i.name.toLowerCase() === name.toLowerCase()
-    );
-
-    if (existingIndex >= 0) {
-      merged[existingIndex].amount += amount;
-      if (!merged[existingIndex].source?.includes(source)) {
-        merged[existingIndex].source = [
-          ...(merged[existingIndex].source || []),
-          source,
-        ].filter(Boolean);
-      }
-    } else {
-      merged.push({
-        id: crypto.randomUUID?.() ?? Date.now() + Math.random(),
-        name,
-        amount,
-        kgPrice,
-        checked: false,
-        source: source !== 'Manual' ? [source] : [],
-      });
-    }
-  }
-  return merged;
-};
+import React, { useState, useEffect } from "react";
+import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../context/AuthProvider";
+import "./grocerylist.css";
 
 export default function GroceryList() {
-  const [items, setItems] = useState(loadFromStorage);
+  const { user, loading: authLoading } = useAuth();
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMealId, setSelectedMealId] = useState('');
-  const [manualName, setManualName] = useState('');
-  const [manualAmount, setManualAmount] = useState('');
+  const [selectedMealId, setSelectedMealId] = useState("");
+  const [manualName, setManualName] = useState("");
+  const [manualAmount, setManualAmount] = useState("");
+  const [items, setItems] = useState([]);
 
   useEffect(() => {
-    saveToStorage(items);
-  }, [items]);
+    if (!user) return;
 
-  useEffect(() => {
-    async function fetchMeals() {
+    const fetchMeals = async () => {
+      setLoading(true);
       const { data, error } = await supabase
-        .from('meals')
-        .select('id, name')
-        .order('name');
+        .from("meals")
+        .select("id, name, ingredients")
+        .eq("user_id", user.id)
+        .order("name");
 
-      if (error) {
-        console.warn('Could not fetch meals:', error);
-      } else {
-        setMeals(data || []);
-      }
+      if (error) console.error("Could not fetch meals:", error);
+      else setMeals(data || []);
+
       setLoading(false);
-    }
+    };
+
     fetchMeals();
-  }, []);
+  }, [user]);
 
-  const addFromRecipe = async () => {
-    if (!selectedMealId) return;
-    setLoading(true);
+  // Merge ingredients into grocery list
+  const mergeIngredients = (existing, newItems, source = "Manual") => {
+    const merged = [...existing];
+    for (const item of newItems) {
+      const name = (item.name || "").trim();
+      if (!name) continue;
+      const amount = parseFloat(item.amount ?? 0) || 0;
+      const kgPrice = parseFloat(item.kg_price ?? 0) || 0;
 
-    const { data, error } = await supabase
-      .from('ingredients')
-      .select('name, kg_price, amount_kg')
-      .eq('meal_id', selectedMealId);
+      const existingIndex = merged.findIndex(
+        (i) => i.name.toLowerCase() === name.toLowerCase()
+      );
 
-    setLoading(false);
-
-    if (error) {
-      console.warn('Could not fetch ingredients:', error);
-      return;
+      if (existingIndex >= 0) {
+        merged[existingIndex].amount += amount;
+        if (!merged[existingIndex].source?.includes(source)) {
+          merged[existingIndex].source = [
+            ...(merged[existingIndex].source || []),
+            source,
+          ].filter(Boolean);
+        }
+      } else {
+        merged.push({
+          id: crypto.randomUUID?.() ?? Date.now() + Math.random(),
+          name,
+          amount,
+          kgPrice,
+          checked: false,
+          source: source !== "Manual" ? [source] : [],
+        });
+      }
     }
+    return merged;
+  };
+
+  const addFromRecipe = () => {
+    if (!selectedMealId) return;
 
     const meal = meals.find((m) => m.id === selectedMealId);
-    const source = meal?.name || 'Recipe';
+    if (!meal) return;
 
-    setItems((prev) =>
-      mergeIngredients(
-        prev,
-        (data || []).map((i) => ({
-          name: i.name,
-          kg_price: i.kg_price,
-          amount_kg: i.amount_kg,
-        })),
-        source
-      )
-    );
-    setSelectedMealId('');
+    const ingredients = meal.ingredients || [];
+    setItems((prev) => mergeIngredients(prev, ingredients, meal.name));
+    setSelectedMealId("");
   };
 
   const addManual = () => {
     const name = manualName.trim();
     if (!name) return;
-
     const amount = parseFloat(manualAmount) || 0;
-
-    setItems((prev) =>
-      mergeIngredients(prev, [{ name, amount_kg: amount }], 'Manual')
-    );
-    setManualName('');
-    setManualAmount('');
+    setItems((prev) => mergeIngredients(prev, [{ name, amount }], "Manual"));
+    setManualName("");
+    setManualAmount("");
   };
 
   const toggleChecked = (id) => {
@@ -146,10 +102,13 @@ export default function GroceryList() {
   };
 
   const formatAmount = (kg) => {
-    if (!kg || kg === 0) return '';
+    if (!kg || kg === 0) return "";
     if (kg >= 1) return `${kg} kg`;
     return `${(kg * 1000).toFixed(0)} g`;
   };
+
+  if (authLoading) return <p>Loading user...</p>;
+  if (!user) return <p>Please log in to manage your grocery list.</p>;
 
   return (
     <div className="grocery-list-container">
@@ -166,7 +125,7 @@ export default function GroceryList() {
               disabled={loading || meals.length === 0}
             >
               <option value="">
-                {meals.length === 0 ? 'No recipes yet' : 'Select a recipe…'}
+                {meals.length === 0 ? "No recipes yet" : "Select a recipe…"}
               </option>
               {meals.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -194,7 +153,9 @@ export default function GroceryList() {
               placeholder="Product or ingredient name"
               value={manualName}
               onChange={(e) => setManualName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addManual())}
+              onKeyDown={(e) =>
+                e.key === "Enter" && (e.preventDefault(), addManual())
+              }
             />
             <input
               type="number"
@@ -203,7 +164,9 @@ export default function GroceryList() {
               placeholder="Amount (kg)"
               value={manualAmount}
               onChange={(e) => setManualAmount(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addManual())}
+              onKeyDown={(e) =>
+                e.key === "Enter" && (e.preventDefault(), addManual())
+              }
             />
             <button
               type="button"
@@ -216,7 +179,7 @@ export default function GroceryList() {
           </div>
         </div>
 
-        {/* List */}
+        {/* Grocery list items */}
         <div className="grocery-list-section">
           <div className="grocery-list-header">
             <h3>Items</h3>
@@ -232,13 +195,17 @@ export default function GroceryList() {
           </div>
 
           {items.length === 0 ? (
-            <p className="grocery-empty">No items yet. Add from recipes or manually.</p>
+            <p className="grocery-empty">
+              No items yet. Add from recipes or manually.
+            </p>
           ) : (
             <ul className="grocery-items">
               {items.map((item) => (
                 <li
                   key={item.id}
-                  className={`grocery-item ${item.checked ? 'grocery-item--checked' : ''}`}
+                  className={`grocery-item ${
+                    item.checked ? "grocery-item--checked" : ""
+                  }`}
                 >
                   <label className="grocery-item-check">
                     <input
@@ -255,7 +222,7 @@ export default function GroceryList() {
                         {formatAmount(item.amount)}
                         {item.source?.length > 0 && (
                           <span className="grocery-item-source">
-                            from {item.source.join(', ')}
+                            from {item.source.join(", ")}
                           </span>
                         )}
                       </span>
@@ -283,12 +250,10 @@ export default function GroceryList() {
 
           {items.length > 0 && (
             <div className="grocery-total">
-              Total: {items
+              Total:{" "}
+              {items
                 .filter((i) => !i.checked)
-                .reduce(
-                  (sum, i) => sum + (i.kgPrice || 0) * (i.amount || 0),
-                  0
-                )
+                .reduce((sum, i) => sum + (i.kgPrice || 0) * (i.amount || 0), 0)
                 .toFixed(2)}
               €
             </div>

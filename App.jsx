@@ -1,29 +1,27 @@
-// App.jsx
-import React, { useEffect, useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
-import Navbar from './components/Navbar';
-import WeekCalendar from './components/weekcalendar';
-import BudgetCard from './components/budgetcard';
-import MealForm from './components/mealform';
-import GroceryList from './components/grocerylist';
-import { supabase } from './lib/supabaseClient';
-import LoginButton from './lib/src/LoginButton';
+import React, { useEffect, useState } from "react";
+import { Routes, Route } from "react-router-dom";
+import Navbar from "./components/navbar";
+import WeekCalendar from "./components/weekcalendar";
+import BudgetCard from "./components/budgetcard";
+import MealForm from "./components/mealform";
+import GroceryList from "./components/grocerylist";
+import { supabase } from "./lib/supabaseClient";
+import LoginButton from "./lib/src/LoginButton";
 
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // --- AUTH STATE MANAGEMENT ---
   useEffect(() => {
-    // Check for existing session
-    supabase.auth.getSession().then(({ data }) => {
-      console.log('Initial session:', data);
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
       setUser(data.session?.user ?? null);
       setLoading(false);
-    });
+    };
+    getSession();
 
-    // Listen for login/logout events
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Auth state change:', _event, session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
@@ -33,36 +31,35 @@ function App() {
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) console.error('Logout error:', error);
+    if (error) console.error("Logout error:", error);
   };
 
-  if (loading) return <div>Loading...</div>;
+  // --- LOADING SCREEN ---
+  if (loading) return <div className="loading">Loading...</div>;
 
-  // LOGIN SCREEN
+  // --- LOGIN SCREEN ---
   if (!user) {
     return (
       <div className="login-container">
-        <h2>Welcome to Meal planner</h2>
+        <h2>Welcome to Budget Bites</h2>
         <LoginButton />
-        {/* Optional test button to confirm rendering */}
-        <button onClick={() => alert('Button works!')}>Test Button</button>
       </div>
     );
   }
 
-  // MAIN APP WHEN LOGGED IN
+  // --- MAIN APP ---
   return (
-    <>
+    <div className="app">
       <Navbar user={user} onLogout={handleLogout} />
-      <div className="app-container">
+      <main className="app-container">
         <Routes>
           <Route path="/" element={<WeekCalendar />} />
-          <Route path="/budget" element={<BudgetCard />} />
-          <Route path="/meals" element={<MealForm />} />
-          <Route path="/groceries" element={<GroceryList />} />
+          <Route path="/budget" element={<BudgetCard user={user} />} />
+          <Route path="/meals" element={<MealForm user={user} />} />
+          <Route path="/groceries" element={<GroceryList user={user} />} />
         </Routes>
-      </div>
-    </>
+      </main>
+    </div>
   );
 }
 

@@ -1,139 +1,126 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient';
-console.log("Is Supabase loaded?", supabase);
-import { format, startOfWeek, addDays } from 'date-fns';
-import { fi } from 'date-fns/locale';
-import './budgetcard.css';
+import { useEffect, useState } from "react";
+import { supabase } from "../supabaseClient";
 
-const STORAGE_KEY = 'my-food-app-weekly-budget';
-
-const getWeekKey = (date) => format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-
-const loadBudgetForWeek = (weekKey) => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const budgets = stored ? JSON.parse(stored) : {};
-    return budgets[weekKey] ?? '';
-  } catch {
-    return '';
-  }
-};
-
-const saveBudgetForWeek = (weekKey, value) => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const budgets = stored ? JSON.parse(stored) : {};
-    budgets[weekKey] = value;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(budgets));
-  } catch {
-    // ignore
-  }
-};
-
-export default function BudgetCard() {
-  const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [budgetInput, setBudgetInput] = useState('');
-  const [plannedMeals, setPlannedMeals] = useState([]);
+export default function BudgetCard({ user }) {
+  const [budget, setBudget] = useState(null);
+  const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
 
-  const weekKey = getWeekKey(weekStart);
-  const weekLabel = `${format(weekStart, 'd MMM', { locale: fi })} – ${format(addDays(weekStart, 6), 'd MMM yyyy', { locale: fi })}`;
+  const weekStart = new Date();
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
 
+  // Fetch budget for current user
   useEffect(() => {
-    setBudgetInput(loadBudgetForWeek(weekKey));
-  }, [weekKey]);
+    if (!user) return;
 
-  useEffect(() => {
-    async function fetchPlannedMeals() {
-      const startStr = format(weekStart, 'yyyy-MM-dd');
-      const endStr = format(addDays(weekStart, 6), 'yyyy-MM-dd');
-
+    const fetchBudget = async () => {
+      setLoading(true);
       const { data, error } = await supabase
-        .from('planned_meals')
-        .select('meals (estimated_cost)')
-        .gte('date', startStr)
-        .lte('date', endStr);
+        .from("budgets")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("end_date", weekStart.toISOString())
+        .order("start_date", { ascending: false })
+        .limit(1)
+        .single();
 
-      if (error) {
-        console.error('Error fetching planned meals:', error);
+      if (error && error.code !== "PGRST116") {
+        setError(error.message);
+      } else if (data) {
+        setBudget(data);
+        setAmount(data.amount);
+      } else {
+        setBudget(null);
+        setAmount("");
       }
-      setPlannedMeals(data || []);
+
       setLoading(false);
-    }
-    fetchPlannedMeals();
-  }, [weekStart]);
+    };
 
-  const budget = parseFloat(budgetInput) || 0;
-  const used = plannedMeals.reduce(
-    (sum, pm) => sum + (parseFloat(pm.meals?.estimated_cost) || 0),
-    0
-  );
-  const left = Math.max(0, budget - used);
-  const isOverBudget = budget > 0 && used > budget;
+    fetchBudget();
+  }, [user]);
 
-  const handleBudgetChange = (e) => {
-    const value = e.target.value;
-    setBudgetInput(value);
-    const num = parseFloat(value);
-    if (!isNaN(num) && num >= 0) {
-      saveBudgetForWeek(weekKey, value);
+  const handleSave = async () => {
+    if (!amount || isNaN(amount)) return;
+
+    setSaving(true);
+    setError(null);
+    setSuccessMsg(null);
+
+    const { data, error } = await supabase
+      .from("budgets")
+      .upsert(
+        {
+          user_id: user.id,
+          amount: parseFloat(amount),
+          start_date: weekStart.toISOString(),
+          end_date: weekEnd.toISOString(),
+        },
+        { onConflict: ["user_id"] } // ensures RLS respects single budget per user
+      )
+      .select()
+      .single();
+
+    if (error) {
+      setError(error.message);
+    } else {
+      setBudget(data);
+      setSuccessMsg("Budget saved successfully!");
     }
+
+    setSaving(false);
   };
 
-  const handleBudgetBlur = () => {
-    if (budgetInput === '' || parseFloat(budgetInput) < 0) {
-      saveBudgetForWeek(weekKey, '');
-    }
-  };
+  if (!user) {
+    return (
+      <div className="p-4 border rounded-lg">
+        <p>Please log in to manage your budget.</p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="p-4 border rounded-lg">
+        <p>Loading budget...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="budget-card-container">
-      <div className="budget-card">
-        <h2 className="budget-card-title">Weekly budget</h2>
-        <p className="budget-week-label">{weekLabel}</p>
+    <div className="p-6 bg-white shadow rounded-2xl space-y-4">
+      <h2 className="text-xl font-semibold">Weekly Budget</h2>
 
-        <div className="budget-input-section">
-          <label htmlFor="weekly-budget">Set budget (€)</label>
-          <input
-            id="weekly-budget"
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="e.g. 150"
-            value={budgetInput}
-            onChange={handleBudgetChange}
-            onBlur={handleBudgetBlur}
-          />
-        </div>
+      {budget ? (
+        <p className="text-gray-600">
+          Current budget for this week: <strong>€{budget.amount}</strong>
+        </p>
+      ) : (
+        <p className="text-gray-600">No budget set for this week yet.</p>
+      )}
 
-        {loading ? (
-          <div className="budget-loading">Loading…</div>
-        ) : (
-          <div className="budget-summary">
-            <div className="budget-row budget-row--used">
-              <span className="budget-label">Used</span>
-              <span className="budget-value">{used.toFixed(2)}€</span>
-            </div>
-            <div className="budget-row budget-row--left">
-              <span className="budget-label">Left</span>
-              <span className={`budget-value ${isOverBudget ? 'budget-value--over' : ''}`}>
-                {left.toFixed(2)}€
-              </span>
-            </div>
-            {budget > 0 && (
-              <div className="budget-progress">
-                <div
-                  className="budget-progress-bar"
-                  style={{
-                    width: `${Math.min(100, (used / budget) * 100)}%`,
-                    backgroundColor: isOverBudget ? '#dc2626' : '#667eea',
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        )}
+      <div className="flex gap-2">
+        <input
+          type="number"
+          placeholder="Enter weekly budget"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="border p-2 rounded w-full"
+        />
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="bg-black text-white px-4 py-2 rounded"
+        >
+          {saving ? "Saving..." : "Save"}
+        </button>
       </div>
+
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {successMsg && <p className="text-green-500 text-sm">{successMsg}</p>}
     </div>
-  );
-}
+  ); }

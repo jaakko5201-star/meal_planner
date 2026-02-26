@@ -1,16 +1,17 @@
-// src/lib/src/MealForm.jsx
-import React, { useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
-import './meal_form.css';
+import React, { useState } from "react";
+import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../context/AuthProvider";
+import "./meal_form.css";
 
 const emptyIngredient = () => ({
-  name: '',
-  kgPrice: '',
-  amount: '',
+  name: "",
+  kgPrice: "",
+  amount: "",
 });
 
 export default function MealForm() {
-  const [mealName, setMealName] = useState('');
+  const { user } = useAuth();
+  const [mealName, setMealName] = useState("");
   const [ingredients, setIngredients] = useState([emptyIngredient()]);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
@@ -41,8 +42,13 @@ export default function MealForm() {
     e.preventDefault();
     setMessage(null);
 
+    if (!user) {
+      setMessage({ type: "error", text: "You must be logged in to add meals." });
+      return;
+    }
+
     if (!mealName.trim()) {
-      setMessage({ type: 'error', text: 'Please enter a meal name.' });
+      setMessage({ type: "error", text: "Please enter a meal name." });
       return;
     }
 
@@ -55,45 +61,42 @@ export default function MealForm() {
       }));
 
     if (validIngredients.length === 0) {
-      setMessage({ type: 'error', text: 'Please add at least one ingredient.' });
+      setMessage({ type: "error", text: "Please add at least one ingredient." });
       return;
     }
 
     setSubmitting(true);
 
     try {
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) throw new Error('You must be logged in to add meals');
-
       // Insert meal with user_id and ingredients JSONB
       const { data: mealData, error: mealError } = await supabase
-        .from('meals')
+        .from("meals")
         .insert({
           name: mealName.trim(),
           estimated_cost: Math.round(estimatedCost * 100) / 100,
           user_id: user.id,
-          ingredients: validIngredients, // store as JSONB
+          ingredients: validIngredients,
         })
-        .select('id')
+        .select("id")
         .single();
 
       if (mealError) throw mealError;
 
       setMessage({
-        type: 'success',
+        type: "success",
         text: `Meal "${mealName}" saved. Estimated cost: ${estimatedCost.toFixed(2)}€`,
       });
 
-      // Reset form
-      setMealName('');
+      setMealName("");
       setIngredients([emptyIngredient()]);
     } catch (err) {
-      setMessage({ type: 'error', text: err.message || 'Failed to save meal.' });
+      setMessage({ type: "error", text: err.message || "Failed to save meal." });
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (!user) return <p>Please log in to add meals.</p>;
 
   return (
     <div className="meal-form-container">
@@ -130,7 +133,7 @@ export default function MealForm() {
                   type="text"
                   placeholder="Ingredient name"
                   value={ing.name}
-                  onChange={(e) => updateIngredient(index, 'name', e.target.value)}
+                  onChange={(e) => updateIngredient(index, "name", e.target.value)}
                 />
                 <input
                   type="number"
@@ -138,7 +141,7 @@ export default function MealForm() {
                   min="0"
                   placeholder="€/kg"
                   value={ing.kgPrice}
-                  onChange={(e) => updateIngredient(index, 'kgPrice', e.target.value)}
+                  onChange={(e) => updateIngredient(index, "kgPrice", e.target.value)}
                 />
                 <input
                   type="number"
@@ -146,7 +149,7 @@ export default function MealForm() {
                   min="0"
                   placeholder="Amount (kg)"
                   value={ing.amount}
-                  onChange={(e) => updateIngredient(index, 'amount', e.target.value)}
+                  onChange={(e) => updateIngredient(index, "amount", e.target.value)}
                 />
                 <span className="ingredient-cost">{getIngredientCost(ing).toFixed(2)}€</span>
                 <button
@@ -168,7 +171,7 @@ export default function MealForm() {
             <strong>Estimated cost:</strong> {estimatedCost.toFixed(2)}€
           </div>
           <button type="submit" disabled={submitting} className="btn-submit">
-            {submitting ? 'Saving...' : 'Save meal'}
+            {submitting ? "Saving..." : "Save meal"}
           </button>
         </div>
 

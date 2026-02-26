@@ -1,25 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient';
-import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
-import './weekcalendar.css';
+import React, { useState, useEffect } from "react";
+import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../context/AuthProvider";
+import { format, startOfWeek, addDays, isSameDay } from "date-fns";
+import "./weekcalendar.css";
 
 const MEAL_TYPES = [
-  { key: 'breakfast', label: 'Aamiainen' },
-  { key: 'lunch', label: 'Lounas' },
-  { key: 'dinner', label: 'Illallinen' },
+  { key: "breakfast", label: "Aamiainen" },
+  { key: "lunch", label: "Lounas" },
+  { key: "dinner", label: "Illallinen" },
 ];
 
-const DAY_ABBREV = ['MAAN.', 'TIIS.', 'KESK.', 'TORST.', 'PERJ.', 'LA', 'SUNN.'];
+const DAY_ABBREV = ["MAAN.", "TIIS.", "KESK.", "TORST.", "PERJ.", "LA", "SUNN."];
 
 export default function WeekCalendar() {
-  const [weekStart] = useState(
-    startOfWeek(new Date(), { weekStartsOn: 1 })
-  );
+  const { user, loading: authLoading } = useAuth();
+  const [weekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [plannedMeals, setPlannedMeals] = useState([]);
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [addingTo, setAddingTo] = useState(null);
-  const [selectValue, setSelectValue] = useState('');
+  const [selectValue, setSelectValue] = useState("");
 
   const today = new Date();
 
@@ -27,103 +27,96 @@ export default function WeekCalendar() {
     const date = addDays(weekStart, i);
     return {
       date,
-      dateStr: format(date, 'yyyy-MM-dd'),
+      dateStr: format(date, "yyyy-MM-dd"),
       dayName: DAY_ABBREV[i],
-      dayNumber: format(date, 'd'),
+      dayNumber: format(date, "d"),
       isToday: isSameDay(date, today),
     };
   });
 
   useEffect(() => {
+    if (!user) return;
+
     async function fetchData() {
       setLoading(true);
 
-      const startStr = format(weekStart, 'yyyy-MM-dd');
-      const endStr = format(addDays(weekStart, 6), 'yyyy-MM-dd');
+      const startStr = format(weekStart, "yyyy-MM-dd");
+      const endStr = format(addDays(weekStart, 6), "yyyy-MM-dd");
 
       const [mealsRes, plannedRes] = await Promise.all([
         supabase
-          .from('meals')
-          .select('id, name, estimated_cost')
-          .order('name'),
-
+          .from("meals")
+          .select("id, name, estimated_cost")
+          .eq("user_id", user.id)
+          .order("name"),
         supabase
-          .from('planned_meals')
-          .select('id, date, meal_type, meals (id, name, estimated_cost)')
-          .gte('date', startStr)
-          .lte('date', endStr),
+          .from("planned_meals")
+          .select("id, date, meal_type, meal_id, meals(id,name,estimated_cost)")
+          .eq("user_id", user.id)
+          .gte("date", startStr)
+          .lte("date", endStr),
       ]);
 
       if (mealsRes.data) setMeals(mealsRes.data);
       if (plannedRes.data) setPlannedMeals(plannedRes.data);
-      if (plannedRes.error)
-        console.error('Error fetching planned meals:', plannedRes.error);
+      if (plannedRes.error) console.error("Error fetching planned meals:", plannedRes.error);
 
       setLoading(false);
     }
 
     fetchData();
-  }, [weekStart]);
+  }, [user, weekStart]);
 
   const getMealForSlot = (dateStr, mealType) =>
-    plannedMeals.find(
-      (m) => m.date === dateStr && m.meal_type === mealType
-    );
+    plannedMeals.find((m) => m.date === dateStr && m.meal_type === mealType);
 
   const handleAddClick = (dateStr, mealType) => {
     setAddingTo({ dateStr, mealType });
-    setSelectValue('');
+    setSelectValue("");
   };
 
   const handleAddSubmit = async () => {
-    if (!addingTo || !selectValue) return;
+    if (!user || !addingTo || !selectValue) return;
 
-    const { error } = await supabase.from('planned_meals').insert({
+    const { data, error } = await supabase.from("planned_meals").insert({
       date: addingTo.dateStr,
       meal_type: addingTo.mealType,
       meal_id: selectValue,
-    });
+      user_id: user.id,
+    }).select("id, date, meal_type, meal_id, meals(id,name,estimated_cost)").single();
 
     if (error) {
-      console.error('Error adding meal:', error);
+      console.error("Error adding meal:", error);
       return;
     }
 
-    const added = meals.find((m) => String(m.id) === String(selectValue));
-
-    setPlannedMeals((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID?.() ?? Date.now(),
-        date: addingTo.dateStr,
-        meal_type: addingTo.mealType,
-        meals: added,
-      },
-    ]);
-
+    setPlannedMeals((prev) => [...prev, data]);
     setAddingTo(null);
-    setSelectValue('');
+    setSelectValue("");
   };
 
   const handleRemoveMeal = async (plannedMealId) => {
     const { error } = await supabase
-      .from('planned_meals')
+      .from("planned_meals")
       .delete()
-      .eq('id', plannedMealId);
+      .eq("id", plannedMealId)
+      .eq("user_id", user.id);
 
     if (!error) {
-      setPlannedMeals((prev) =>
-        prev.filter((m) => m.id !== plannedMealId)
-      );
+      setPlannedMeals((prev) => prev.filter((m) => m.id !== plannedMealId));
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="calendar-container">
         <div className="calendar-loading">Ladataan aterioita…</div>
       </div>
     );
+  }
+
+  if (!user) {
+    return <p>Please log in to view your week calendar.</p>;
   }
 
   return (
@@ -136,12 +129,7 @@ export default function WeekCalendar() {
 
         {/* Day headers */}
         {weekDays.map((day) => (
-          <div
-            key={day.dateStr}
-            className={`calendar-day-header ${
-              day.isToday ? 'today' : ''
-            }`}
-          >
+          <div key={day.dateStr} className={`calendar-day-header ${day.isToday ? "today" : ""}`}>
             <span className="calendar-day-name">{day.dayName}</span>
             <span className="calendar-day-number">{day.dayNumber}</span>
           </div>
@@ -150,37 +138,23 @@ export default function WeekCalendar() {
         {/* Meal rows */}
         {MEAL_TYPES.map(({ key: mealType, label }) => (
           <React.Fragment key={mealType}>
-            {/* Meal label */}
             <div className="calendar-meal-label">{label}</div>
 
-            {/* Meal slots */}
             {weekDays.map((day) => {
               const meal = getMealForSlot(day.dateStr, mealType);
               const isAdding =
-                addingTo?.dateStr === day.dateStr &&
-                addingTo?.mealType === mealType;
+                addingTo?.dateStr === day.dateStr && addingTo?.mealType === mealType;
 
               return (
                 <div
                   key={`${day.dateStr}-${mealType}`}
-                  className={`calendar-meal-slot ${
-                    meal ? 'filled' : 'empty'
-                  }`}
-                  onClick={
-                    !meal && !isAdding
-                      ? () =>
-                          handleAddClick(day.dateStr, mealType)
-                      : undefined
-                  }
+                  className={`calendar-meal-slot ${meal ? "filled" : "empty"}`}
+                  onClick={!meal && !isAdding ? () => handleAddClick(day.dateStr, mealType) : undefined}
                 >
                   {meal ? (
                     <>
-                      <div className="meal-name">
-                        {meal.meals?.name}
-                      </div>
-                      <div className="meal-cost">
-                        {meal.meals?.estimated_cost}€
-                      </div>
+                      <div className="meal-name">{meal.meals?.name}</div>
+                      <div className="meal-cost">{meal.meals?.estimated_cost}€</div>
                       <button
                         className="meal-remove-btn"
                         onClick={(e) => {
@@ -193,13 +167,7 @@ export default function WeekCalendar() {
                     </>
                   ) : isAdding ? (
                     <div className="meal-slot-add-form">
-                      <select
-                        value={selectValue}
-                        onChange={(e) =>
-                          setSelectValue(e.target.value)
-                        }
-                        autoFocus
-                      >
+                      <select value={selectValue} onChange={(e) => setSelectValue(e.target.value)} autoFocus>
                         <option value="">Valitse ateria</option>
                         {meals.map((m) => (
                           <option key={m.id} value={m.id}>
@@ -209,17 +177,10 @@ export default function WeekCalendar() {
                       </select>
 
                       <div className="meal-slot-add-actions">
-                        <button
-                          className="btn-add-meal"
-                          onClick={handleAddSubmit}
-                          disabled={!selectValue}
-                        >
+                        <button className="btn-add-meal" onClick={handleAddSubmit} disabled={!selectValue}>
                           Lisää
                         </button>
-                        <button
-                          className="btn-cancel"
-                          onClick={() => setAddingTo(null)}
-                        >
+                        <button className="btn-cancel" onClick={() => setAddingTo(null)}>
                           Peruuta
                         </button>
                       </div>
